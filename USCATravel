@@ -1,0 +1,199 @@
+import java.awt.BorderLayout;
+import java.awt.image.BufferedImage;
+import java.io.FileInputStream;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+import java.awt.Graphics;
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.Color;
+
+public class USCATravel extends JFrame{
+    // open GUI
+    JFrame frame = new JFrame("Flight Calculator");
+    BufferedImage image = null;
+
+    //Instance of Flight Calculator
+    FlightCalculator flightCalculator = new FlightCalculator();
+
+    // Location Pins
+    BufferedImage pinImage = null;
+    BufferedImage pinImage2 = null;
+    int pinX = -1;
+    int pinY = -1;
+    int pin2X = -1;
+    int pin2Y = -1;
+    int pixel;
+
+    JLabel label = new JLabel();
+    JPanel dPanel = new JPanel();
+    JPanel aPanel = new JPanel();
+    JPanel iPanel = new JPanel();
+    JPanel distancePanel = new JPanel();
+    JPanel estimatePanel = new JPanel();
+
+    JLabel dLabel = new JLabel("Depart: ");
+    JLabel aLabel = new JLabel("Arrive: ");
+    JLabel iLabel = new JLabel("<html>Press and hold the <br/> departure location.</html>");
+    JLabel distanceLabel = new JLabel("Distance: ");
+    JLabel estimateLabel = new JLabel("Duration: ");
+    
+    // open travel planner
+    public USCATravel() {
+        SwingUtilities.invokeLater(new Runnable() {
+            // initialize broadcast messages
+            public void run() {
+                setupPanels();
+                setupFrame();
+                
+                try {
+                    // Reading in Images
+                    image = ImageIO.read(new FileInputStream("./images/map.jpg"));
+                    pinImage = ImageIO.read(new FileInputStream("./images/pin.png"));
+                    pinImage2 = pinImage;
+
+                    // setting Background
+                    ImageIcon icon = new ImageIcon(image);
+                    label.setIcon(icon);
+                    frame.getContentPane().add(label, BorderLayout.CENTER);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    System.exit(1);
+                }
+
+                
+                frame.pack();
+                frame.setLocationRelativeTo(null);
+                frame.setVisible(true);
+            } 
+        });
+    }
+
+    // set up broadcast messages
+    private void setupPanels() {
+        JPanel dPanel = new JPanel();
+        JPanel aPanel = new JPanel();
+
+        dPanel.setBackground(Color.black);
+        dPanel.setBounds(0, 0, 120, 30);
+        dPanel.setLayout(new BorderLayout());
+        dLabel.setForeground(Color.WHITE);
+        dLabel.setFont(new Font("Sans-serif", Font.BOLD, 12));
+        dPanel.add(dLabel);
+        frame.add(dPanel);
+
+        aPanel.setBackground(Color.black);
+        aPanel.setBounds(0, 30, 120, 30);
+        aPanel.setLayout(new BorderLayout());
+        aLabel.setForeground(Color.WHITE);
+        aLabel.setFont(new Font("Sans-serif", Font.BOLD, 12));
+        aPanel.add(aLabel);
+        frame.add(aPanel);
+
+        iPanel.setBackground(Color.black);
+        iPanel.setBounds(200, 0, 120, 60);
+        iPanel.setLayout(new BorderLayout());
+        iLabel.setForeground(Color.WHITE);
+        iLabel.setFont(new Font("Sans-serif", Font.BOLD, 12));
+        iPanel.add(iLabel);
+        frame.add(iPanel);
+
+        distancePanel.setBackground(Color.black);
+        distancePanel.setBounds(0, 60, 120, 30);
+        distancePanel.setLayout(new BorderLayout());
+        distanceLabel.setForeground(Color.WHITE);
+        distanceLabel.setFont(new Font("Sans-serif", Font.BOLD, 12));
+        distancePanel.add(distanceLabel);
+        frame.add(distancePanel);
+
+        estimatePanel.setBackground(Color.black);
+        estimatePanel.setBounds(0, 90, 120, 30);
+        estimatePanel.setLayout(new BorderLayout());
+        estimateLabel.setForeground(Color.WHITE);
+        estimateLabel.setFont(new Font("Sans-serif", Font.BOLD, 12));
+        estimatePanel.add(estimateLabel);
+        frame.add(estimatePanel);
+    }
+
+
+    private void setupFrame(){
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Pin Drawing on mouse events
+        label = new JLabel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (pinX != -1 && pinY != -1) {
+                    g.drawImage(pinImage, pinX - (pinImage.getWidth() / 2)-5, pinY - pinImage.getHeight() -25, null);
+                }
+                if (pin2X != -1 && pin2Y != -1) {
+                    g.drawImage(pinImage2, pin2X - (pinImage2.getWidth() / 2)-5, pin2Y - pinImage2.getHeight() -25, null);
+                }
+            }
+        };
+
+        // Click and Release Mouse Listener
+        frame.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                pinX = e.getX();
+                pinY = e.getY();
+                pixel = image.getRGB(pinX,pinY);
+
+                // validate departure location
+                if (pixel != -1) {
+                    dLabel.setText("Departed: " + "(" + pinX + ", " + pinY + ")");
+                    iLabel.setText("<html>Now drag and <br/> release where you are going.</html>");
+                    frame.repaint();
+                }
+                else {
+                    iLabel.setText("<html>Please select a <br/> land part of the map.</html>");
+                }
+            }
+
+            public void mouseReleased(MouseEvent e) {
+                pin2X = e.getX();
+                pin2Y = e.getY();
+                pixel = image.getRGB(pinX,pinY);
+
+                // validate arrival location
+                if (pixel != -1) {
+                    double distance = flightCalculator.calcDistance(pinX, pinY, pin2X, pin2Y);
+                    aLabel.setText("Arrived: " + "(" + pin2X + ", " + pin2Y + ")");
+                    distanceLabel.setText("Distance: " + distance + " km");
+                    estimateLabel.setText("Duration: " + flightCalculator.estimateFlightDuration(distance) + " hrs");
+                    iLabel.setText("<html>Press and hold the <br/> departure location.</html>");
+                    frame.repaint();
+                }
+                else {
+                    iLabel.setText("<html>Please select a <br/> land part of the map.</html>");
+                }
+            }
+        });
+    }
+
+    
+
+    
+
+    public static void main(String[] args) throws Exception{
+        EventQueue.invokeLater(new Runnable() {
+            // open GUI
+            public void run() {
+                try {
+                    new USCATravel();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+}
